@@ -1036,9 +1036,6 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
     #region Message Creation / Population
 
-    void BeginSend(NpgsqlConnector connector)
-        => connector.WriteBuffer.Timeout = TimeSpan.FromSeconds(CommandTimeout);
-
     internal Task Write(NpgsqlConnector connector, bool async, bool flush, CancellationToken cancellationToken = default)
     {
         return (_behavior & CommandBehavior.SchemaOnly) == 0
@@ -1153,8 +1150,6 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
     async Task SendDeriveParameters(NpgsqlConnector connector, bool async, CancellationToken cancellationToken = default)
     {
-        BeginSend(connector);
-
         var syncCaller = !async;
         for (var i = 0; i < InternalBatchCommands.Count; i++)
         {
@@ -1173,8 +1168,6 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
     async Task SendPrepare(NpgsqlConnector connector, bool async, CancellationToken cancellationToken = default)
     {
-        BeginSend(connector);
-
         var syncCaller = !async;
         for (var i = 0; i < InternalBatchCommands.Count; i++)
         {
@@ -1222,8 +1215,6 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
 
     async Task SendClose(NpgsqlConnector connector, bool async, CancellationToken cancellationToken = default)
     {
-        BeginSend(connector);
-
         foreach (var batchCommand in InternalBatchCommands)
         {
             if (!batchCommand.IsPrepared)
@@ -1525,7 +1516,6 @@ GROUP BY pg_proc.proargnames, pg_proc.proargtypes, pg_proc.proallargtypes, pg_pr
                     // Instead, all sends for non-first statements are performed asynchronously (even if the user requested sync),
                     // in a special synchronization context to prevents a dependency on the thread pool (which would also trigger
                     // deadlocks).
-                    BeginSend(connector);
                     sendTask = Write(connector, async, flush: true, CancellationToken.None);
 
                     // The following is a hack. It raises an exception if one was thrown in the first phases
